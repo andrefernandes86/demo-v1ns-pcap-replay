@@ -19,6 +19,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 IP_TOKEN_RE = re.compile(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?:\.\d{1,5})?")
+SYN_RE = re.compile(r"IP6?\s+(\S+)\s+>\s+(\S+):.*Flags \[S\]")
 NON_ROUTABLE = {"0.0.0.0", "255.255.255.255"}
 
 
@@ -40,15 +41,12 @@ def is_private(ip: str) -> bool:
 
 def token_to_ip(tok: str):
     """'172.16.8.195.60209' -> '172.16.8.195' ; '172.16.8.195' -> itself."""
-    parts = tok.split(".")
-    for n in (4, len(parts)):
-        candidate = ".".join(parts[:4])
-        try:
-            ipaddress.ip_address(candidate)
-            return candidate
-        except ValueError:
-            return None
-    return None
+    candidate = ".".join(tok.split(".")[:4])
+    try:
+        ipaddress.ip_address(candidate)
+        return candidate
+    except ValueError:
+        return None
 
 
 def gather_files(sets):
@@ -68,26 +66,36 @@ def analyze(pcap: Path):
             ["tcpdump", "-r", str(pcap), "-nn"], capture_output=True, text=True, timeout=180
         )
     except Exception as e:
-        return None, f"tcpdump error: {e}"
+        return None, None, f"tcpdump error: {e}"
     if proc.returncode != 0 and not proc.stdout:
-        return None, f"tcpdump failed: {proc.stderr.strip()[:150]}"
+        return None, None, f"tcpdump failed: {proc.stderr.strip()[:150]}"
 
     counts = Counter()
+    syn_client_ip = None
     for line in proc.stdout.splitlines():
         for tok in IP_TOKEN_RE.findall(line):
             ip = token_to_ip(tok)
             if ip and ip not in NON_ROUTABLE:
                 counts[ip] += 1
-    return counts, None
+        if syn_client_ip is None:
+            m = SYN_RE.search(line)
+            if m:
+                syn_client_ip = token_to_ip(m.group(1))
+    return counts, syn_client_ip, None
 
 
-def pick_local(counts: Counter):
+def pick_local(counts: Counter, syn_client_ip):
     private_counts = {ip: c for ip, c in counts.items() if is_private(ip)}
     if not private_counts:
         return None, None, "no-private-ip-found"
     ranked = sorted(private_counts.items(), key=lambda kv: -kv[1])
     local_ip, local_count = ranked[0]
     if len(ranked) > 1 and ranked[1][1] > 0.5 * local_count:
+        # Two comparably-active private IPs (e.g. a request/response protocol
+        # conversation) — frequency alone can't tell local from other. Break
+        # the tie by TCP handshake: the SYN sender is treated as local.
+        if syn_client_ip and syn_client_ip in private_counts:
+            return syn_client_ip, private_counts[syn_client_ip], "ok (client-tiebreak)"
         return local_ip, local_count, "ambiguous"
     return local_ip, local_count, "ok"
 
@@ -111,12 +119,12 @@ def main():
             rows.append((rel_set, f.name, "SKIP", "-", "lfs-pointer-stub"))
             continue
 
-        counts, err = analyze(f)
+        counts, syn_client_ip, err = analyze(f)
         if err:
             rows.append((rel_set, f.name, "SKIP", "-", err))
             continue
 
-        local_ip, local_count, verdict = pick_local(counts)
+        local_ip, local_count, verdict = pick_local(counts, syn_client_ip)
         if verdict == "no-private-ip-found":
             rows.append((rel_set, f.name, "SKIP", "-", verdict))
             continue
@@ -124,7 +132,7 @@ def main():
             rows.append((rel_set, f.name, "REVIEW", local_ip, f"ambiguous (count={local_count})"))
             continue
 
-        rows.append((rel_set, f.name, "REWRITE", local_ip, f"count={local_count}"))
+        rows.append((rel_set, f.name, "REWRITE", local_ip, f"{verdict}, count={local_count}"))
 
         if args.apply:
             out_dir = out_root / rel_set
