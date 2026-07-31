@@ -3,6 +3,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 PCAPS_DIR = ROOT / "pcaps"
+PCAP_GLOBS = ("*.pcap", "*.pcapng", "*.cap")
 
 # category -> (label, description, is_malicious)
 CATEGORIES = {
@@ -36,7 +37,7 @@ def gather_files(selected_categories, base=None):
         d = base / cat
         if not d.is_dir():
             continue
-        for pat in ("*.pcap", "*.pcapng"):
+        for pat in PCAP_GLOBS:
             files.extend(sorted(d.glob(pat)))
     return files
 
@@ -48,6 +49,6 @@ def category_counts(base=None):
         d = base / cat
         n = 0
         if d.is_dir():
-            n = len(list(d.glob("*.pcap"))) + len(list(d.glob("*.pcapng")))
+            n = sum(len(list(d.glob(pat))) for pat in PCAP_GLOBS)
         counts[cat] = n
     return counts

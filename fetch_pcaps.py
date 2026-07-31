@@ -51,7 +51,7 @@ def validate_existing(remove_broken=True, log=print):
     for cat_dir in sorted(cat.PCAPS_DIR.glob("*")):
         if not cat_dir.is_dir():
             continue
-        for f in list(cat_dir.glob("*.pcap")) + list(cat_dir.glob("*.pcapng")):
+        for f in [p for pat in cat.PCAP_GLOBS for p in cat_dir.glob(pat)]:
             checked += 1
             if not is_valid_pcap(f):
                 log(f"  BROKEN: {f.relative_to(ROOT)}")
