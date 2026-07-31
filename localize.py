@@ -27,6 +27,8 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT))
+import categories as cat
 IP_TOKEN_RE = re.compile(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?:\.\d{1,5})?")
 LINE_RE = re.compile(r"IP6?\s+(\S+)\s+>\s+(\S+):")
 SYN_RE = re.compile(r"IP6?\s+(\S+)\s+>\s+(\S+):.*Flags \[S\]")
@@ -69,17 +71,6 @@ def split_ip_port(tok: str):
         return None, None
     rest = tok[len(ip) + 1 :] if tok.startswith(ip + ".") else ""
     return ip, (int(rest) if rest.isdigit() else None)
-
-
-def gather_files(sets):
-    files = []
-    for s in sets:
-        d = ROOT / s
-        if not d.is_dir():
-            continue
-        for pat in ("*.pcap", "*.pcapng"):
-            files.extend(sorted(d.glob(pat)))
-    return files
 
 
 def analyze(pcap: Path):
@@ -196,14 +187,17 @@ def rewrite(infile: Path, outfile: Path, local_ips, target: str):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--set", choices=["it", "ot", "all"], default="all")
+    ap.add_argument(
+        "--categories", default="all",
+        help="comma-separated category list, or 'all' (default). Categories: " + ", ".join(cat.CATEGORIES),
+    )
     ap.add_argument("--target", default="192.168.50.222", help="IP to rewrite the local address(es) to")
-    ap.add_argument("--out-dir", default="localized", help="output directory (mirrors it/ ot/ structure)")
+    ap.add_argument("--out-dir", default="localized", help="output directory (mirrors pcaps/ category structure)")
     ap.add_argument("--apply", action="store_true", help="run tcprewrite; without this, only report")
     args = ap.parse_args()
 
-    sets = ["it", "ot"] if args.set == "all" else [args.set]
-    files = gather_files(sets)
+    selected = [c.strip() for c in args.categories.split(",") if c.strip()]
+    files = cat.gather_files(selected)
     out_root = ROOT / args.out_dir
 
     rows = []

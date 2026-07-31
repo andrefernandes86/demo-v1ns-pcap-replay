@@ -5,13 +5,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /data
-# Run ./setup.sh on the host first so git-lfs pulls the real pcap binaries
-# before the build context is copied in.
-COPY it /data/it
-COPY ot /data/ot
-COPY replay.py /data/replay.py
+COPY categories.py sources.py pcap_engine.py fetch_pcaps.py localize.py replay_cron.py replay_menu.py /data/
+COPY pcaps /data/pcaps
 
 # Requires --net host --cap-add=NET_RAW --cap-add=NET_ADMIN so packets
 # actually egress the host's physical interface instead of a virtual bridge.
-ENTRYPOINT ["python3", "replay.py"]
-CMD ["--set", "all"]
+ENTRYPOINT ["python3", "replay_cron.py"]
+CMD ["--categories", "all"]
