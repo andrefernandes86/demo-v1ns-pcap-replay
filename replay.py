@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """
 pcap replay orchestrator — replays IT/OT pcap sets out a real network
-interface via tcpreplay, with a live terminal dashboard.
+interface via tcpreplay, in parallel, with a live terminal dashboard.
 """
 import argparse
 import os
 import re
 import subprocess
 import sys
-import time
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 try:
@@ -75,7 +76,7 @@ def ensure_root():
         os.execvp("sudo", ["sudo", "-E", sys.executable] + sys.argv)
 
 
-def render(iface, rows, files, totals):
+def render(iface, jobs, rows, files, totals):
     t = Table(expand=True)
     t.add_column("File")
     t.add_column("Status")
@@ -92,48 +93,63 @@ def render(iface, rows, files, totals):
         f"[red]Failed: {totals['fail']}[/red]   [dark_orange]Skipped: {totals['skip']}[/dark_orange]   "
         f"Total packets: {totals['packets']}   Total bytes: {totals['bytes']}"
     )
-    return Panel(t, title=f"[bold]pcap replay[/bold] — interface [cyan]{iface}[/cyan]", subtitle=summary)
+    return Panel(
+        t,
+        title=f"[bold]pcap replay[/bold] — interface [cyan]{iface}[/cyan]  (parallel jobs: {jobs})",
+        subtitle=summary,
+    )
 
 
-def replay(iface, files, console):
+def replay(iface, files, jobs, topspeed, console):
     rows = {f.name: {"status": "queued", "packets": "-", "bytes": "-", "pps": "-", "dur": "-"} for f in files}
     totals = {"packets": 0, "bytes": 0, "ok": 0, "fail": 0, "skip": 0}
+    lock = threading.Lock()
 
-    with Live(render(iface, rows, files, totals), console=console, refresh_per_second=4) as live:
-        for f in files:
-            name = f.name
+    def update_display(live):
+        live.update(render(iface, jobs, rows, files, totals))
 
-            if is_lfs_pointer(f):
+    def run_one(f, live):
+        name = f.name
+
+        if is_lfs_pointer(f):
+            with lock:
                 rows[name]["status"] = "skipped"
                 totals["skip"] += 1
-                live.update(render(iface, rows, files, totals))
-                continue
+                update_display(live)
+            return
 
+        with lock:
             rows[name]["status"] = "running"
-            live.update(render(iface, rows, files, totals))
+            update_display(live)
 
-            cmd = ["tcpreplay", f"--intf1={iface}", "--stats=1", str(f)]
-            last_stats = None
-            try:
-                proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-            except FileNotFoundError:
-                console.print("[red]tcpreplay not found — run ./setup.sh first[/red]")
-                sys.exit(1)
+        cmd = ["tcpreplay", f"--intf1={iface}", "--stats=1"]
+        if topspeed:
+            cmd.append("-t")
+        cmd.append(str(f))
 
-            for line in proc.stdout:
-                m = STATS_RE.search(line)
-                if m:
-                    last_stats = m
-                    rows[name]["packets"] = m.group(1)
-                    rows[name]["bytes"] = m.group(2)
-                    rows[name]["dur"] = m.group(3)
-                    live.update(render(iface, rows, files, totals))
-                rm = RATE_RE.search(line)
-                if rm:
-                    rows[name]["pps"] = rm.group(1)
-                    live.update(render(iface, rows, files, totals))
+        last_stats = None
+        try:
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        except FileNotFoundError:
+            console.print("[red]tcpreplay not found — run ./setup.sh first[/red]")
+            os._exit(1)
 
-            proc.wait()
+        for line in proc.stdout:
+            m = STATS_RE.search(line)
+            rm = RATE_RE.search(line)
+            if m or rm:
+                with lock:
+                    if m:
+                        last_stats = m
+                        rows[name]["packets"] = m.group(1)
+                        rows[name]["bytes"] = m.group(2)
+                        rows[name]["dur"] = m.group(3)
+                    if rm:
+                        rows[name]["pps"] = rm.group(1)
+                    update_display(live)
+
+        proc.wait()
+        with lock:
             if proc.returncode == 0:
                 rows[name]["status"] = "done"
                 totals["ok"] += 1
@@ -143,16 +159,27 @@ def replay(iface, files, console):
             else:
                 rows[name]["status"] = "failed"
                 totals["fail"] += 1
+            update_display(live)
 
-            live.update(render(iface, rows, files, totals))
+    with Live(render(iface, jobs, rows, files, totals), console=console, refresh_per_second=4) as live:
+        with ThreadPoolExecutor(max_workers=jobs) as pool:
+            futures = [pool.submit(run_one, f, live) for f in files]
+            for fut in as_completed(futures):
+                fut.result()
 
-    console.print(render(iface, rows, files, totals))
+    console.print(render(iface, jobs, rows, files, totals))
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Replay IT/OT pcap sets out a network interface.")
+    ap = argparse.ArgumentParser(description="Replay IT/OT pcap sets out a network interface, in parallel.")
     ap.add_argument("--set", choices=["it", "ot", "all"], default="all", help="which pcap set to replay")
     ap.add_argument("--iface", help="network interface to send on (default: auto-detected default route iface)")
+    ap.add_argument("--jobs", "-j", type=int, default=8, help="number of pcaps to replay concurrently (default: 8)")
+    ap.add_argument(
+        "--realtime",
+        action="store_true",
+        help="replay at the pcap's original capture timing instead of top speed (much slower; off by default)",
+    )
     args = ap.parse_args()
 
     ensure_root()
@@ -165,8 +192,9 @@ def main():
         print("No pcap files found for set(s): " + ", ".join(sets), file=sys.stderr)
         sys.exit(1)
 
+    jobs = max(1, min(args.jobs, len(files)))
     console = Console()
-    replay(iface, files, console)
+    replay(iface, files, jobs, topspeed=not args.realtime, console=console)
 
 
 if __name__ == "__main__":
