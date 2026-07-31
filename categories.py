@@ -12,12 +12,16 @@ CATEGORIES = {
     "ftp": ("FTP", "Benign FTP sessions", False),
     "smb": ("SMB", "Benign SMB/CIFS file sharing", False),
     "database": ("Database", "Benign MySQL/MSSQL/PostgreSQL traffic", False),
-    "exploits": ("Exploits", "CVE exploitation and vulnerability probing", True),
+    "exploits": ("Exploits", "CVE exploitation, vulnerability probing, IDS evasion", True),
     "malware": ("Malware", "Ransomware, trojans, malicious email attachments", True),
-    "c2": ("C2 / Cobalt Strike", "Command-and-control beaconing traffic", True),
+    "c2": ("C2", "Command-and-control beaconing (Cobalt Strike, Sliver)", True),
     "hacking-tools": ("Hacking tools", "Mimikatz, PsExec, RDP tunneling, lateral movement", True),
     "scans": ("Scans", "Port/service scanning activity", True),
-    "ics-scada": ("ICS/SCADA", "DNP3, Modbus, and other OT protocol traffic", True),
+    "exfiltration": ("Exfiltration", "DNS tunneling and other data exfiltration techniques", True),
+    "cryptomining": ("Cryptomining", "Stratum protocol cryptomining/cryptojacking traffic", True),
+    "webshells": ("Web shells", "Post-exploitation web shell traffic", True),
+    "ics-scada": ("ICS/SCADA", "DNP3, Modbus, and other OT protocol traffic (benign protocol conformance)", False),
+    "ics-attacks": ("ICS/OT attacks", "Genuine ICS/OT malware and attack traffic (e.g. TRITON/TRISIS)", True),
 }
 
 

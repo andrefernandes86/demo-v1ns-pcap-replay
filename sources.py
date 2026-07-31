@@ -11,6 +11,15 @@ free research/education resources:
   - malware-traffic-analysis.net: the standard public malware/C2 pcap
     archive used across the industry; zips are password-protected with a
     fixed, publicly documented scheme (infected_YYYYMMDD).
+  - elastic/examples: Elastic's own published security-analytics samples.
+  - nesfit/DI-cryptominingdetection: academic (Brno Univ. of Technology)
+    research dataset for a published Digital Investigation journal article.
+  - NozomiNetworks/tricotools: Nozomi Networks' own published TRITON/TRISIS
+    ICS malware capture, released alongside their TriStation protocol
+    dissector.
+  - MohamedMostafa010/C2Lab: a public Sliver C2 lab capture set.
+  - supreethh/Network-Traffic-Analysis-Webshell-Detection: a public webshell
+    detection research project's sample capture.
 
 Each entry: category, filename (as saved locally), url, and optional
 extraction info ("gz": True, or "zip": {"password": str, "member": str}).
@@ -51,6 +60,10 @@ SOURCES = [
      "url": "https://raw.githubusercontent.com/chrissanders/packets/master/http_dvwa_directorytraversal.pcapng"},
     {"category": "exploits", "filename": "ek_to_cryptowall4.pcapng",
      "url": "https://raw.githubusercontent.com/chrissanders/packets/master/ek_to_cryptowall4.pcapng"},
+    {"category": "exploits", "filename": "2022-01-03-log4j-server-probes.pcap",
+     "url": "https://www.malware-traffic-analysis.net/2022/01/03/2022-01-03-three-days-of-server-probes-including-log4j-attempts.pcap.zip",
+     "zip": {"password": "infected_20220103",
+             "member": "2022-01-03-three-days-of-server-probes-including-log4j-attempts.pcap"}},
 
     {"category": "malware", "filename": "cryptowall4_c2.pcapng",
      "url": "https://raw.githubusercontent.com/chrissanders/packets/master/cryptowall4_c2.pcapng"},
@@ -61,6 +74,8 @@ SOURCES = [
      "url": "https://www.malware-traffic-analysis.net/2021/05/26/2021-05-26-Trickbot-infection-with-Cobalt-Strike.pcap.zip",
      "zip": {"password": "infected_20210526",
              "member": "2021-05-26-Trickbot-infection-with-Cobalt-Strike.pcap"}},
+    {"category": "c2", "filename": "capture_from_C2_to_botnet.pcap",
+     "url": "https://raw.githubusercontent.com/MohamedMostafa010/C2Lab/main/capture_from_C2_to_botnet.pcap"},
 
     {"category": "hacking-tools", "filename": "arppoison.pcapng",
      "url": "https://raw.githubusercontent.com/chrissanders/packets/master/arppoison.pcapng"},
@@ -69,4 +84,16 @@ SOURCES = [
 
     {"category": "scans", "filename": "synscan.pcapng",
      "url": "https://raw.githubusercontent.com/chrissanders/packets/master/synscan.pcapng"},
+
+    {"category": "exfiltration", "filename": "dns-tunnel-iodine.pcap",
+     "url": "https://raw.githubusercontent.com/elastic/examples/master/Security%20Analytics/dns_tunnel_detection/dns-tunnel-iodine.pcap"},
+
+    {"category": "cryptomining", "filename": "xmr-eu1.nanopool.org.pcapng",
+     "url": "https://raw.githubusercontent.com/nesfit/DI-cryptominingdetection/master/PCAPs/xmr-eu1.nanopool.org.pcapng"},
+
+    {"category": "webshells", "filename": "webshell.pcap",
+     "url": "https://raw.githubusercontent.com/supreethh/Network-Traffic-Analysis-Webshell-Detection/main/webshell.pcap"},
+
+    {"category": "ics-attacks", "filename": "triton-malware-exec.pcap",
+     "url": "https://raw.githubusercontent.com/NozomiNetworks/tricotools/master/malware_exec.pcap"},
 ]

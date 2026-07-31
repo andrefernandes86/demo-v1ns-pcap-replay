@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
 import categories as cat
+import mitre
 import pcap_engine as engine
 
 try:
@@ -30,6 +31,17 @@ def resolve_base(explicit):
     return cat.PCAPS_DIR
 
 
+def category_technique_ids(category, base):
+    d = base / category
+    if not d.is_dir():
+        return []
+    ids = set()
+    for pat in cat.PCAP_GLOBS:
+        for f in d.glob(pat):
+            ids.update(mitre.techniques_for(category, f.name))
+    return sorted(ids)
+
+
 def prompt_categories(console, base):
     counts = cat.category_counts(base=base)
     keys = list(cat.CATEGORIES)
@@ -40,7 +52,9 @@ def prompt_categories(console, base):
         n = counts.get(key, 0)
         tag = "[red]malicious[/red]" if malicious else "[green]benign[/green]"
         avail = f"{n} file{'s' if n != 1 else ''}" if n else "[dim]none available[/dim]"
-        console.print(f"  [cyan]{i:2d}[/cyan]. {label:<20} {tag:<20} {desc}  ({avail})")
+        techniques = category_technique_ids(key, base)
+        mitre_tag = f"  [magenta]{', '.join(techniques)}[/magenta]" if techniques else ""
+        console.print(f"  [cyan]{i:2d}[/cyan]. {label:<20} {tag:<20} {desc}  ({avail}){mitre_tag}")
     console.print(f"\n  [cyan]{len(keys)+1:2d}[/cyan]. All categories\n")
 
     while True:
@@ -57,6 +71,27 @@ def prompt_categories(console, base):
         console.print("[red]No valid selection — try again.[/red]")
 
 
+def print_mitre_report(console, base):
+    console.print("\n[bold]MITRE ATT&CK mapping[/bold]\n")
+    for key in cat.CATEGORIES:
+        d = base / key
+        if not d.is_dir():
+            continue
+        files = [f for pat in cat.PCAP_GLOBS for f in sorted(d.glob(pat))]
+        if not files:
+            continue
+        label = cat.CATEGORIES[key][0]
+        console.print(f"[bold cyan]{label}[/bold cyan] ({key})")
+        for f in files:
+            ids = mitre.techniques_for(key, f.name)
+            if ids:
+                desc = "; ".join(mitre.describe(t) for t in ids)
+                console.print(f"  {f.name}: {desc}")
+            else:
+                console.print(f"  {f.name}: [dim](no technique mapping — benign traffic)[/dim]")
+        console.print()
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--categories", help="skip the menu; comma-separated category list, or 'all'")
@@ -64,12 +99,17 @@ def main():
     ap.add_argument("--jobs", "-j", type=int, default=8, help="concurrent replays (default: 8)")
     ap.add_argument("--realtime", action="store_true", help="replay at original capture timing (slower)")
     ap.add_argument("--base", help="override pcap source dir (default: ./localized if present, else ./pcaps)")
+    ap.add_argument("--mitre-report", action="store_true", help="print the full per-file MITRE ATT&CK mapping and exit")
     args = ap.parse_args()
-
-    engine.ensure_root()
 
     console = Console()
     base = resolve_base(args.base)
+
+    if args.mitre_report:
+        print_mitre_report(console, base)
+        sys.exit(0)
+
+    engine.ensure_root()
 
     if args.categories:
         selected = [c.strip() for c in args.categories.split(",") if c.strip()]

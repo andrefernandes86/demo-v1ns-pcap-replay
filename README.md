@@ -1,10 +1,11 @@
 # demo-v1ns-pcap-replay
 
 Replays categorized sample pcaps out a real network interface via
-`tcpreplay`, so a network sensor on the wire can detect the traffic —
-benign application traffic (DNS, HTTP, FTP, SMB, database) alongside
-malicious activity (exploits, malware, C2/Cobalt Strike, hacking tools,
-scans, ICS/SCADA protocol abuse).
+`tcpreplay`, so a network sensor, IPS, NDR, or ATP solution on the wire can
+detect the traffic — benign application traffic (DNS, HTTP, FTP, SMB,
+database) alongside a broad spread of malicious activity (exploits,
+malware, C2, exfiltration, cryptomining, web shells, hacking tools, scans,
+and real ICS/OT attacks) mapped to MITRE ATT&CK.
 
 ## Setup
 
@@ -27,15 +28,40 @@ Pcaps live under `pcaps/<category>/`:
 | `ftp` | benign | FTP sessions |
 | `smb` | benign | SMB/CIFS file sharing |
 | `database` | benign | MySQL, MSSQL (TDS), PostgreSQL traffic |
-| `exploits` | malicious | CVE exploitation, vulnerability probing, IDS evasion |
+| `exploits` | malicious | CVE exploitation (incl. Log4Shell), vulnerability probing, IDS evasion |
 | `malware` | malicious | Ransomware, trojans, malicious email attachments |
-| `c2` | malicious | Command-and-control beaconing (Cobalt Strike) |
+| `c2` | malicious | Command-and-control beaconing (Cobalt Strike, Sliver) |
 | `hacking-tools` | malicious | Mimikatz, PsExec, RDP tunneling, lateral movement |
 | `scans` | malicious | Port/service scanning |
-| `ics-scada` | malicious | DNP3, Modbus, and other OT protocol traffic |
+| `exfiltration` | malicious | DNS tunneling and other data-exfiltration techniques |
+| `cryptomining` | malicious | Stratum protocol cryptomining/cryptojacking traffic |
+| `webshells` | malicious | Post-exploitation web shell traffic |
+| `ics-scada` | benign | DNP3, Modbus, and other OT protocol traffic (protocol conformance, not attacks) |
+| `ics-attacks` | malicious | Genuine ICS/OT malware and attack traffic (TRITON/TRISIS) |
 
 Run `./replay_menu.py` with no arguments to see live per-category file
-counts.
+counts and MITRE ATT&CK technique tags.
+
+## MITRE ATT&CK mapping
+
+Every malicious pcap is tagged with the network-observable ATT&CK
+technique(s) it demonstrates — Enterprise ATT&CK for IT-side categories,
+[ATT&CK for ICS](https://attack.mitre.org/matrices/ics/) for the OT ones —
+in `mitre.py`. See the full per-file mapping:
+
+```
+./replay_menu.py --mitre-report
+```
+
+Covers reconnaissance/scanning (T1595, T1046), initial access (T1190,
+T1566), exploitation (T1210, T1203), credential access (T1003, T1558),
+lateral movement (T1021, T1570), persistence (T1505.003 web shells),
+command and control (T1071, T1572, T1219), exfiltration (T1041, T1048.003),
+impact (T1486 ransomware, T1496 cryptojacking), and ICS-specific techniques
+like unauthorized command messages (T0855) and manipulation of control
+(T0831). The homogeneous `ics-scada` protocol-conformance set is tagged by
+filename pattern (read vs. write/operate commands) rather than hand-tagged
+file by file — see `mitre.py` for the exact rules.
 
 ## Two runners
 
@@ -116,8 +142,11 @@ file, HTML error page, corrupt data), then downloads every entry in
 `sources.py` not already present, verifying each download the same way
 before keeping it. `sources.py` documents where each sample comes from —
 all public research/education sources (Practical Packet Analysis book
-captures, the Wireshark wiki SampleCaptures mirror, malware-traffic-analysis.net).
-Add new entries there to grow any category.
+captures, the Wireshark wiki SampleCaptures mirror, malware-traffic-analysis.net,
+Elastic's own examples repo, an academic cryptomining-detection dataset,
+Nozomi Networks' own published TRITON/TRISIS capture, and public C2/webshell
+research projects). Add new entries there to grow any category — pair a new
+entry with a `mitre.py` tag if it demonstrates a specific technique.
 
 ## Docker
 

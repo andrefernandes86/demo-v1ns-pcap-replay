@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /data
-COPY categories.py sources.py pcap_engine.py fetch_pcaps.py localize.py replay_cron.py replay_menu.py /data/
+COPY categories.py sources.py mitre.py pcap_engine.py fetch_pcaps.py localize.py replay_cron.py replay_menu.py /data/
 COPY pcaps /data/pcaps
 
 # Requires --net host --cap-add=NET_RAW --cap-add=NET_ADMIN so packets
