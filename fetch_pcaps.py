@@ -42,7 +42,10 @@ def is_valid_pcap(path: Path) -> bool:
         )
     except Exception:
         return False
-    return r.returncode == 0 and "reading from file" in (r.stdout + r.stderr)
+    # tcpdump's success banner wording varies by platform/format ("reading
+    # from file ..." vs "reading from PCAP-NG file ..."), so rely on the
+    # exit code alone — it's 0 only when the file actually parsed.
+    return r.returncode == 0
 
 
 def validate_existing(remove_broken=True, log=print):

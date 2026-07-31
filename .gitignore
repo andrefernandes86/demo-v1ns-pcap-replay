@@ -1,20 +1,2 @@
 /localized/
 __pycache__/
-
-# Sample pcaps downloaded by fetch_pcaps.py (see sources.py) — reproducible
-# from public sources on demand, not committed, to avoid repo bloat.
-/pcaps/dns/
-/pcaps/http/
-/pcaps/ftp/
-/pcaps/smb/
-/pcaps/database/
-/pcaps/c2/
-/pcaps/exploits/aurora.pcapng
-/pcaps/exploits/ek_to_cryptowall4.pcapng
-/pcaps/exploits/http_dvwa_directorytraversal.pcapng
-/pcaps/exploits/http_dvwa_sqlinjection.pcapng
-/pcaps/malware/cryptowall4_c2.pcapng
-/pcaps/malware/ratinfected.pcapng
-/pcaps/hacking-tools/arppoison.pcapng
-/pcaps/hacking-tools/sessionhijacking.pcapng
-/pcaps/scans/synscan.pcapng
