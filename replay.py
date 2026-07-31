@@ -60,10 +60,10 @@ def is_lfs_pointer(path: Path) -> bool:
         return False
 
 
-def gather_files(sets):
+def gather_files(sets, base=ROOT):
     files = []
     for s in sets:
-        d = ROOT / s
+        d = base / s
         if not d.is_dir():
             continue
         for pat in ("*.pcap", "*.pcapng"):
@@ -180,13 +180,19 @@ def main():
         action="store_true",
         help="replay at the pcap's original capture timing instead of top speed (much slower; off by default)",
     )
+    ap.add_argument(
+        "--base",
+        default=".",
+        help="directory containing the it/ot pcap sets, relative to this script (default: '.'; use "
+        "'localized' after running ./localize.py --apply to replay the IP-rewritten copies)",
+    )
     args = ap.parse_args()
 
     ensure_root()
 
     iface = args.iface or detect_iface()
     sets = ["it", "ot"] if args.set == "all" else [args.set]
-    files = gather_files(sets)
+    files = gather_files(sets, base=ROOT / args.base)
 
     if not files:
         print("No pcap files found for set(s): " + ", ".join(sets), file=sys.stderr)

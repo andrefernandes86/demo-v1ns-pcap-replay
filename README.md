@@ -20,6 +20,26 @@ original (often much slower) capture timing instead.
 
 Subset wrappers are still available: `./it/replay.sh`, `./ot/replay.sh`.
 
+## Normalizing the local IP (localize.py)
+
+Each pcap captures traffic between a specific "local" test host (a private
+RFC1918 address) and the remote/malicious side. `localize.py` finds that
+dominant local address per file (by packet frequency) and rewrites it to a
+single fixed IP, leaving every other address — source or destination —
+exactly as originally captured.
+
+```
+python3 localize.py --set all                 # dry run: reports what it *would* do
+python3 localize.py --set all --apply         # writes rewritten copies under ./localized/
+sudo ./replay.py --set all --base localized   # replay the rewritten set
+```
+
+Default target is `192.168.50.222`; override with `--target <ip>`. Files
+where no private IP is found, or where two private IPs are similarly
+dominant (ambiguous — can't tell which one is "local"), are reported but not
+rewritten so you can check them by hand. `./localized/` is git-ignored —
+it's a derived output, not committed.
+
 **Switch port-security note:** `tcpreplay` sends frames using the *original*
 source MAC addresses captured in each pcap, not this host's real NIC MAC. If
 the switch port is running port-security/MAC-limiting, a burst of unfamiliar
