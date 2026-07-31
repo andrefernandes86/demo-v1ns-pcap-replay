@@ -21,6 +21,7 @@ rewritten, so they can be checked by hand.
 import argparse
 import ipaddress
 import re
+import shutil
 import subprocess
 import sys
 from collections import Counter
@@ -215,9 +216,23 @@ def main():
         local_ips, detail = pick_local(a)
         if local_ips is None:
             rows.append((rel_set, f.name, "SKIP", "-", detail))
+            # No private IP to rewrite, but the file itself is valid — copy
+            # it through unchanged so ./localized/ stays a complete mirror
+            # of ./pcaps/ (nothing silently missing from a --base localized
+            # replay just because there was nothing to localize).
+            if args.apply:
+                out_dir = out_root / rel_set
+                out_dir.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(f, out_dir / f.name)
             continue
         if detail.startswith("ambiguous"):
             rows.append((rel_set, f.name, "REVIEW", ",".join(local_ips), detail))
+            # Same reasoning as the no-private-ip-found case: copy through
+            # unchanged rather than silently dropping it from localized/.
+            if args.apply:
+                out_dir = out_root / rel_set
+                out_dir.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(f, out_dir / f.name)
             continue
 
         rows.append((rel_set, f.name, "REWRITE", ",".join(local_ips), detail))

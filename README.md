@@ -117,10 +117,12 @@ sudo ./replay_menu.py --base localized             # (or replay_cron.py) replay 
 
 Default target is `192.168.50.222`; override with `--target <ip>`. Files
 where no private IP is found, or where the tiebreaks can't resolve a clear
-winner, are reported as `SKIP`/`REVIEW` and left untouched so they can be
-checked by hand. `./localized/` is git-ignored — it's a derived output,
-not committed. Both runners prefer `./localized/` automatically when it
-exists.
+winner, are reported as `SKIP`/`REVIEW` — these are still copied through
+unchanged into `./localized/` (so a `--base localized` replay never
+silently drops files just because there was nothing to localize), and are
+worth checking by hand if you want them normalized too. `./localized/` is
+git-ignored — it's a derived output, not committed. Both runners prefer
+`./localized/` automatically when it exists.
 
 **Switch port-security note:** `tcpreplay` sends frames using the *original*
 source MAC addresses captured in each pcap, not this host's real NIC MAC. If
