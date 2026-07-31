@@ -1,18 +1,30 @@
-# tools-pcap-replay
+# demo-v1ns-pcap-replay
 
-1- docker build -t tools-pcap-replay .
+Replays IT and OT attack/protocol pcaps out a real network interface via
+`tcpreplay`, so a network sensor on the wire can detect the traffic. Includes
+a live terminal dashboard showing per-file status, packets, bytes, and rate.
 
-2- docker run --net host --rm -it tools-pcap-replay bash
+## Bare metal (recommended)
 
-from dockerhub
+```
+./setup.sh          # installs tcpreplay, git-lfs, pulls real pcap binaries, installs the dashboard dep
+sudo ./replay.py --set all      # or --set it / --set ot
+```
 
-docker run --rm -t -v $(pwd):/data -i andrefernandes86/tools-pcap-replay /usr/bin/tcpreplay --intf1=eth0 *.pcap
+The interface is auto-detected from the default route. Override with
+`--iface <name>` or `IFACE=<name> sudo -E ./replay.py`.
 
+Subset wrappers are still available: `./it/replay.sh`, `./ot/replay.sh`.
 
-or 
+## Docker
 
-with docker file
+`--net host` (plus raw-socket capabilities) is required — without it,
+packets stay inside Docker's virtual bridge network and never reach the
+physical wire a sensor would be watching.
 
-docker run --rm -it andrefernandes86/tools-pcap-replay
-
-
+```
+./setup.sh                       # pulls real pcap binaries via git-lfs first
+docker build -t demo-v1ns-pcap-replay .
+docker run --rm -it --net host --cap-add=NET_RAW --cap-add=NET_ADMIN \
+    demo-v1ns-pcap-replay --set all
+```

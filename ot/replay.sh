@@ -1,3 +1,4 @@
 #!/bin/sh
-/usr/bin/tcpreplay --intf1=eth0 *.pcap
-/usr/bin/tcpreplay --intf1=eth0 *.pcapng
+# Replays only the OT pcap set via replay.py's live dashboard.
+DIR="$(cd "$(dirname "$0")/.." && pwd)"
+exec python3 "$DIR/replay.py" --set ot "$@"

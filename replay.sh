@@ -1,5 +1,5 @@
 #!/bin/sh
-/usr/bin/tcpreplay -t --intf1=eth0 /data/tools-pcap-replay/it/*.pcap
-/usr/bin/tcpreplay -t --intf1=eth0 /data/tools-pcap-replay/it/*.pcapng
-/usr/bin/tcpreplay -t --intf1=eth0 /data/tools-pcap-replay/ot/*.pcap
-/usr/bin/tcpreplay -t --intf1=eth0 /data/tools-pcap-replay/ot/*.pcapng
+# Replays both the IT and OT pcap sets via replay.py's live dashboard.
+# Run ./setup.sh once beforehand to install dependencies.
+DIR="$(cd "$(dirname "$0")" && pwd)"
+exec python3 "$DIR/replay.py" --set all "$@"
