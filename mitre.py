@@ -22,6 +22,7 @@ ENTERPRISE = {
     "T1003": ("OS Credential Dumping", "Credential Access"),
     "T1558": ("Steal or Forge Kerberos Tickets", "Credential Access"),
     "T1557": ("Adversary-in-the-Middle", "Credential Access / Collection"),
+    "T1110": ("Brute Force", "Credential Access"),
     "T1046": ("Network Service Discovery", "Discovery"),
     "T1049": ("System Network Connections Discovery", "Discovery"),
     "T1505.003": ("Server Software Component: Web Shell", "Persistence"),
@@ -34,6 +35,7 @@ ENTERPRISE = {
     "T1048.003": ("Exfiltration Over Unencrypted/Obfuscated Non-C2 Protocol", "Exfiltration"),
     "T1486": ("Data Encrypted for Impact", "Impact"),
     "T1496": ("Resource Hijacking", "Impact"),
+    "T1498": ("Network Denial of Service", "Impact"),
 }
 
 ICS = {
@@ -127,6 +129,10 @@ ICS_KEYWORD_RULES = [
 
 CATEGORY_DEFAULTS = {
     "ics-scada": ["T0888"],  # generic OT protocol discovery/operations
+    "ddos": ["T1498"],
+    "cryptomining": ["T1496"],
+    "phishing": ["T1566"],
+    "brute-force": ["T1110"],
 }
 
 
